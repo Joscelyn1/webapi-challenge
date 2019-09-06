@@ -12,3 +12,31 @@ I need this code, just don't know where, perhaps should make some middleware, do
 
 Go code!
 */
+
+const express = require('express');
+const actionModel = require('./data/helpers/actionModel.js');
+const projectModel = require('./data/helpers/projectModel.js');
+
+const server = express();
+
+server.use(express.json());
+
+server.get('/', (req, res) => {
+  res.send(`hello`);
+});
+
+server.get('/api/actions', (req, res) => {
+  actionModel
+    .get()
+    .then(actions => res.status(200).json(actions))
+    .catch(err => {
+      console.log(err);
+      res
+        .status(500)
+        .json({ error: 'The actions information could not be retrieved.' });
+    });
+});
+
+const port = 4000;
+
+server.listen(port, () => console.log(`server on ${port}`));
