@@ -25,19 +25,7 @@ server.get('/', (req, res) => {
   res.send(`hello`);
 });
 
-// get all the actions
-server.get('/api/actions', (req, res) => {
-  actionModel
-    .get()
-    .then(actions => res.status(200).json(actions))
-    .catch(err => {
-      console.log(err);
-      res
-        .status(500)
-        .json({ error: 'The actions information could not be retrieved.' });
-    });
-});
-// get all the projects
+// get all the projects -- finished
 server.get('/api/projects', (req, res) => {
   projectModel
     .get()
@@ -50,83 +38,25 @@ server.get('/api/projects', (req, res) => {
     });
 });
 
-// get specified action
-server.get('/api/actions/:id', (req, res) => {
-  const { id } = req.params;
-  actionModel
-    .get(id)
-    .then(action => {
-      console.log('action', action);
-      if (action) {
-        res.status(200).json(action);
-      } else {
-        res
-          .status(404)
-          .json({ error: 'The action with the specified ID does not exist.' });
-      }
-    })
-    .catch(err => {
-      console.log(err);
-      res
-        .status(500)
-        .json({ error: 'The action information could not be retrieved.' });
-    });
+// get specified project -- finished
+server.get('/api/projects/:id', validateProjectId, (req, res) => {
+  res.status(200).json(req.project);
 });
 
-// get specified project
-server.get('/api/projects/:id', (req, res) => {
-  const { id } = req.params;
-  projectModel
-    .get(id)
-    .then(project => {
-      console.log('project', project);
-      if (project) {
-        res.status(200).json(project);
-      } else {
-        res
-          .status(404)
-          .json({ error: 'The project with the specified ID does not exist.' });
-      }
-    })
-    .catch(err => {
-      console.log(err);
-      res
-        .status(500)
-        .json({ error: 'The project information could not be retrieved.' });
-    });
-});
-
-// post a new action
-
-server.post('/api/actions/:id', (req, res) => {
-  const { description, notes, completed } = req.body;
-
-  const { id } = req.params;
-
-  if (!description || !notes || typeof completed !== 'boolean') {
-    return res
-      .status(400)
-      .json({ error: 'You need to add a description and notes and completed' });
-  }
-
-  projectModel.getProjectActions(id).then(({ id }) => {
-    actionModel.insert({ description, notes, completed });
-  });
-});
-
-// post a new project
+// post a new project -- finished
 server.post('/api/projects', (req, res) => {
   const { name, description, completed } = req.body;
-  if (!description || !completed || !name) {
-    return res
-      .status(400)
-      .json({ error: 'Need description and completed and name' });
+  if (!description || !name || typeof completed !== 'boolean') {
+    return res.status(400).json({
+      error:
+        'Needs description and completed and name. "completed" must be a boolean'
+    });
   }
 
   projectModel
     .insert({ description, name, completed })
-    .then(({ id }) => {
-      res.status(200).json(id);
+    .then(newProject => {
+      res.status(200).json(newProject);
     })
     .catch(err => {
       console.log(err);
@@ -134,52 +64,63 @@ server.post('/api/projects', (req, res) => {
     });
 });
 
-// remove a project
-server.delete('/api/projects/:id', (req, res) => {
+// remove a project -- finished
+server.delete('/api/projects/:id', validateProjectId, (req, res) => {
   const { id } = req.params;
   projectModel
     .remove(id)
-    .then(removed => {
-      if (removed) {
-        res.status(204).end();
-      } else {
-        res.status(404).json({ error: 'Project with id does not exist' });
-      }
+    .then(() => {
+      res.status(204).end();
     })
     .catch(err => {
-      console.log('delete', err);
+      console.log('delete error', err);
       res.status(500).json({ error: 'Error removing project' });
     });
 });
 
-// // remove an action
-// server.delete('/api/actions/:id', (req, res) => {
-//   const { id } = req.params;
-//   const actionId = req.body.actionId;
-//   if (!actionId) {
-//     return res
-//       .status(400)
-//       .json({ error: 'need to know the id of the action you want to remove' });
-//   }
-//   projectModel
-//     .getProjectActions(id)
-//     .then(project => {
-//       if (project) {
-//         actionModel
-//           .remove(actionId)
-//           .then(result => {
-//             res.status(200).end();
-//           })
-//           .catch(res.status(500).json({ error: 'Error removing action' }));
-//       } else {
-//         res.status(404).json({ error: 'Project with id does not exist' });
-//       }
-//     })
-//     .catch(err => {
-//       console.log('delete', err);
-//       res.status(500).json({ error: 'Error removing action' });
-//     });
-// });
+// edit a project -- finished
+
+server.put('/api/projects/:id', validateProjectId, (req, res) => {
+  const { id } = req.params;
+  const { name, description, completed } = req.body;
+  if (!description || !name || typeof completed !== 'boolean') {
+    return res.status(400).json({
+      error:
+        'Needs description and completed and name. "completed" must have a boolean value'
+    });
+  }
+  projectModel
+    .update(id, { name, description, completed })
+    .then(updatedResource => {
+      res.status(200).json(updatedResource);
+    })
+    .catch(err => {
+      console.log('update error', err);
+      res.status(500).json({ error: 'Error editing project' });
+    });
+});
+
+// get all the actions for a specific project
+
+server.get('/api/projects/:id/actions', (req, res) => {
+  const { id } = req.params;
+});
+
+//middleware
+
+function validateProjectId(req, res, next) {
+  const { id } = req.params;
+  projectModel.get(id).then(project => {
+    if (project) {
+      req.project = project;
+      next();
+    } else {
+      res
+        .status(404)
+        .json({ error: 'There is no project with the specified id' });
+    }
+  });
+}
 
 const port = 4000;
 
