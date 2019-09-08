@@ -91,8 +91,8 @@ server.put('/api/projects/:id', validateProjectId, (req, res) => {
   }
   projectModel
     .update(id, { name, description, completed })
-    .then(updatedResource => {
-      res.status(200).json(updatedResource);
+    .then(updatedProject => {
+      res.status(200).json(updatedProject);
     })
     .catch(err => {
       console.log('update error', err);
@@ -118,7 +118,7 @@ server.get('/api/projects/:id/actions', validateProjectId, (req, res) => {
 // add an action for a specific project
 
 server.post('/api/projects/:id/actions', validateProjectId, (req, res) => {
-  const { id } = req.params;
+  const project_id = req.params.id;
   const { description, notes, completed } = req.body;
   if (!description || !notes || typeof completed !== 'boolean') {
     return res.status(400).json({
@@ -126,16 +126,9 @@ server.post('/api/projects/:id/actions', validateProjectId, (req, res) => {
         'Needs description and notes and name. "completed" must have a boolean value'
     });
   }
-  projectModel
-    .get(id)
+  actionModel
+    .insert({ description, notes, completed, project_id })
     .then(project => {
-      project.actions.push({
-        description: description,
-        notes: notes,
-        completed: completed,
-        project_id: Number(id),
-        id: Date.now()
-      });
       res.status(200).json(project);
     })
     .catch(err => {
@@ -143,6 +136,37 @@ server.post('/api/projects/:id/actions', validateProjectId, (req, res) => {
       res.status(500).json({ error: 'error adding action for project' });
     });
 });
+
+// delete an action for a specific project
+
+server.delete(
+  '/api/projects/:id/actions/:actionId',
+  validateProjectId,
+  (req, res) => {
+    const { id } = req.params;
+    const { actionId } = req.params;
+    projectModel
+      .get(id)
+      .then(project => {
+        for (let i = 0; i < project.actions.length; i++) {
+          if (project.actions[i] === actionId) {
+            project.actions.splice(i, 1);
+          }
+        }
+        projectModel
+          .update(id, project)
+          .then(res.status(200).json(project))
+          .catch(err => {
+            console.log('update project error', err);
+            res.status(500).json({ error: 'Error deleting action' });
+          });
+      })
+      .catch(err => {
+        console.log('error deleting action for project', err);
+        res.status(500).json({ error: 'error deleting action for project' });
+      });
+  }
+);
 
 //middleware
 
@@ -163,3 +187,22 @@ function validateProjectId(req, res, next) {
 const port = 4000;
 
 server.listen(port, () => console.log(`server on ${port}`));
+
+/*
+      let updatedProject = { ...project };
+
+      updatedProject.actions.push({
+        description: description,
+        notes: notes,
+        completed: completed,
+        project_id: Number(id),
+        id: Date.now()
+      });
+      projectModel
+        .update(id, updatedProject)
+        .then(res.status(200).json(updatedProject))
+        .catch(err => {
+          console.log('update project error', err);
+          res.status(500).json({ error: 'Error updating project' });
+        });
+*/
