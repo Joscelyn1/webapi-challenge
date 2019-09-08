@@ -100,10 +100,48 @@ server.put('/api/projects/:id', validateProjectId, (req, res) => {
     });
 });
 
-// get all the actions for a specific project
+// get all the actions for a specific project -- finished
 
-server.get('/api/projects/:id/actions', (req, res) => {
+server.get('/api/projects/:id/actions', validateProjectId, (req, res) => {
   const { id } = req.params;
+  projectModel
+    .getProjectActions(id)
+    .then(actions => {
+      res.status(200).json(actions);
+    })
+    .catch(err => {
+      console.log('get actions error', err);
+      res.status(500).json({ error: 'Error getting actions for project' });
+    });
+});
+
+// add an action for a specific project
+
+server.post('/api/projects/:id/actions', validateProjectId, (req, res) => {
+  const { id } = req.params;
+  const { description, notes, completed } = req.body;
+  if (!description || !notes || typeof completed !== 'boolean') {
+    return res.status(400).json({
+      error:
+        'Needs description and notes and name. "completed" must have a boolean value'
+    });
+  }
+  projectModel
+    .get(id)
+    .then(project => {
+      project.actions.push({
+        description: description,
+        notes: notes,
+        completed: completed,
+        project_id: Number(id),
+        id: Date.now()
+      });
+      res.status(200).json(project);
+    })
+    .catch(err => {
+      console.log('error adding action for project', err);
+      res.status(500).json({ error: 'error adding action for project' });
+    });
 });
 
 //middleware
