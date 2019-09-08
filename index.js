@@ -117,24 +117,18 @@ server.get('/api/projects/:id/actions', validateProjectId, (req, res) => {
 
 // get a specific action -- finished
 
-server.get(
-  '/api/projects/:id/actions/:actionId',
-  validateProjectId,
-  (req, res) => {
-    const { actionId } = req.params;
-    actionModel
-      .get(actionId)
-      .then(action => {
-        if (!action) {
-          res.status(404).json({ error: "couldn't find action with this id" });
-        } else res.status(200).json(action);
-      })
-      .catch(err => {
-        console.log('get action error', err);
-        res.status(500).json({ error: 'Error getting action' });
-      });
-  }
-);
+server.get('/api/projects/actions/:actionId', validateActionId, (req, res) => {
+  const { actionId } = req.params;
+  actionModel
+    .get(actionId)
+    .then(action => {
+      res.status(200).json(action);
+    })
+    .catch(err => {
+      console.log('get action error', err);
+      res.status(500).json({ error: 'Error getting action' });
+    });
+});
 
 // add an action -- finished
 
@@ -161,8 +155,8 @@ server.post('/api/projects/:id/actions', validateProjectId, (req, res) => {
 // delete an action -- finished
 
 server.delete(
-  '/api/projects/:id/actions/:actionId',
-  validateProjectId,
+  '/api/projects/actions/:actionId',
+  validateActionId,
   (req, res) => {
     const { actionId } = req.params;
     actionModel
@@ -179,30 +173,26 @@ server.delete(
 
 // edit an action -- finished
 
-server.put(
-  '/api/projects/:id/actions/:actionId',
-  validateProjectId,
-  (req, res) => {
-    const { actionId } = req.params;
+server.put('/api/projects/actions/:actionId', validateActionId, (req, res) => {
+  const { actionId } = req.params;
 
-    const { description, notes, completed } = req.body;
-    if (!description || !notes || typeof completed !== 'boolean') {
-      return res.status(400).json({
-        error:
-          'Needs description and notes and name. "completed" must have a boolean value'
-      });
-    }
-    actionModel
-      .update(actionId, { description, notes, completed })
-      .then(updatedAction => {
-        res.status(200).json(updatedAction);
-      })
-      .catch(err => {
-        console.log('error editing action', err);
-        res.status(500).json({ error: 'error editing action' });
-      });
+  const { description, notes, completed } = req.body;
+  if (!description || !notes || typeof completed !== 'boolean') {
+    return res.status(400).json({
+      error:
+        'Needs description and notes and name. "completed" must have a boolean value'
+    });
   }
-);
+  actionModel
+    .update(actionId, { description, notes, completed })
+    .then(updatedAction => {
+      res.status(200).json(updatedAction);
+    })
+    .catch(err => {
+      console.log('error editing action', err);
+      res.status(500).json({ error: 'error editing action' });
+    });
+});
 
 //middleware
 
@@ -216,6 +206,20 @@ function validateProjectId(req, res, next) {
       res
         .status(404)
         .json({ error: 'There is no project with the specified id' });
+    }
+  });
+}
+
+function validateActionId(req, res, next) {
+  const { actionId } = req.params;
+  actionModel.get(actionId).then(action => {
+    if (action) {
+      req.action = action;
+      next();
+    } else {
+      res
+        .status(404)
+        .json({ error: 'There is no action with the specified id' });
     }
   });
 }
