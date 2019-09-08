@@ -115,7 +115,28 @@ server.get('/api/projects/:id/actions', validateProjectId, (req, res) => {
     });
 });
 
-// add an action for a specific project
+// get a specific action -- finished
+
+server.get(
+  '/api/projects/:id/actions/:actionId',
+  validateProjectId,
+  (req, res) => {
+    const { actionId } = req.params;
+    actionModel
+      .get(actionId)
+      .then(action => {
+        if (!action) {
+          res.status(404).json({ error: "couldn't find action with this id" });
+        } else res.status(200).json(action);
+      })
+      .catch(err => {
+        console.log('get action error', err);
+        res.status(500).json({ error: 'Error getting action' });
+      });
+  }
+);
+
+// add an action -- finished
 
 server.post('/api/projects/:id/actions', validateProjectId, (req, res) => {
   const project_id = req.params.id;
@@ -137,33 +158,48 @@ server.post('/api/projects/:id/actions', validateProjectId, (req, res) => {
     });
 });
 
-// delete an action for a specific project
+// delete an action -- finished
 
 server.delete(
   '/api/projects/:id/actions/:actionId',
   validateProjectId,
   (req, res) => {
-    const { id } = req.params;
     const { actionId } = req.params;
-    projectModel
-      .get(id)
+    actionModel
+      .remove(actionId)
       .then(project => {
-        for (let i = 0; i < project.actions.length; i++) {
-          if (project.actions[i] === actionId) {
-            project.actions.splice(i, 1);
-          }
-        }
-        projectModel
-          .update(id, project)
-          .then(res.status(200).json(project))
-          .catch(err => {
-            console.log('update project error', err);
-            res.status(500).json({ error: 'Error deleting action' });
-          });
+        res.status(200).json(project);
       })
       .catch(err => {
         console.log('error deleting action for project', err);
         res.status(500).json({ error: 'error deleting action for project' });
+      });
+  }
+);
+
+// edit an action -- finished
+
+server.put(
+  '/api/projects/:id/actions/:actionId',
+  validateProjectId,
+  (req, res) => {
+    const { actionId } = req.params;
+
+    const { description, notes, completed } = req.body;
+    if (!description || !notes || typeof completed !== 'boolean') {
+      return res.status(400).json({
+        error:
+          'Needs description and notes and name. "completed" must have a boolean value'
+      });
+    }
+    actionModel
+      .update(actionId, { description, notes, completed })
+      .then(updatedAction => {
+        res.status(200).json(updatedAction);
+      })
+      .catch(err => {
+        console.log('error editing action', err);
+        res.status(500).json({ error: 'error editing action' });
       });
   }
 );
@@ -187,22 +223,3 @@ function validateProjectId(req, res, next) {
 const port = 4000;
 
 server.listen(port, () => console.log(`server on ${port}`));
-
-/*
-      let updatedProject = { ...project };
-
-      updatedProject.actions.push({
-        description: description,
-        notes: notes,
-        completed: completed,
-        project_id: Number(id),
-        id: Date.now()
-      });
-      projectModel
-        .update(id, updatedProject)
-        .then(res.status(200).json(updatedProject))
-        .catch(err => {
-          console.log('update project error', err);
-          res.status(500).json({ error: 'Error updating project' });
-        });
-*/
